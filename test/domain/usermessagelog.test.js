@@ -1,0 +1,57 @@
+const { describe, it } = require('mocha')
+const chai = require('chai')
+const expect = chai.expect
+
+const { UserMessageLog } = require('../../src/domain/usermessagelog')
+const utility = require('../utility')
+
+describe('UserMessageLog', () => {
+  it('should should log messages', () => {
+    const userlog = new UserMessageLog()
+    userlog.logmessage(utility.getDiscordMsg({}))
+    expect(userlog.getlogsize()).to.equal(1)
+  })
+  it('should reduce messages older than 1 day', () => {
+    const userlog = new UserMessageLog()
+    const oldmessage = utility.getDiscordMsg({})
+    oldmessage.timestamp = new Date((oldmessage.getTimeStamp().getTime() - (1000 * 60 * 60 * 24)))
+    userlog.logmessage(oldmessage)
+    expect(userlog.getlogsize()).to.equal(1)
+    userlog.logmessage(utility.getDiscordMsg({}))
+    expect(userlog.getlogsize()).to.equal(2)
+    userlog.reduce()
+    expect(userlog.getlogsize()).to.equal(1)
+  })
+  it('should not change initial date', () => {
+    const userlog = new UserMessageLog()
+    expect(userlog.getInitialTime()).to.equal(undefined)
+    userlog.logmessage(utility.getDiscordMsg({}))
+    const initialDate = userlog.getInitialTime()
+    expect(initialDate).to.be.a('Date')
+    userlog.logmessage(utility.getDiscordMsg({}))
+    expect(userlog.getInitialTime()).to.equal(initialDate)
+  })
+  it('should update totals messages', () => {
+    const userlog = new UserMessageLog()
+    userlog.logmessage(utility.getDiscordMsg({}))
+    userlog.logmessage(utility.getDiscordMsg({}))
+    expect(userlog.getAllTimeCount()).to.equal(2)
+  })
+  it('should retain totals after reduction', () => {
+    const userlog = new UserMessageLog()
+    const oldmessage = utility.getDiscordMsg({})
+    oldmessage.timestamp = new Date((oldmessage.getTimeStamp().getTime() - (1000 * 60 * 60 * 24)))
+    userlog.logmessage(oldmessage)
+    userlog.logmessage(utility.getDiscordMsg({}))
+    userlog.reduce()
+    expect(userlog.getAllTimeCount()).to.equal(2)
+  })
+  it('should return count of messages in last hour', () => {
+    const userlog = new UserMessageLog()
+    const oldmessage = utility.getDiscordMsg({})
+    oldmessage.timestamp = new Date((oldmessage.getTimeStamp().getTime() - (1000 * 60 * 60 * 2)))
+    userlog.logmessage(oldmessage)
+    userlog.logmessage(utility.getDiscordMsg({}))
+    expect(userlog.getMessagesInLastHour()).to.equal(1)
+  })
+})
